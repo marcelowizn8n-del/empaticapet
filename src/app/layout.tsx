@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Manrope } from "next/font/google";
+import { Plus_Jakarta_Sans, Manrope, Caveat } from "next/font/google";
 import { AuthProvider } from "@/lib/supabase/auth-context";
 import "./globals.css";
 
@@ -15,9 +15,15 @@ const manrope = Manrope({
   weight: ["400", "500", "600"],
 });
 
+const caveat = Caveat({
+  variable: "--font-script",
+  subsets: ["latin"],
+  weight: ["500", "700"],
+});
+
 export const metadata: Metadata = {
-  title: "Empática Pet | The Living Sanctuary",
-  description: "Ecossistema completo de saúde pet - conectando tutores, veterinários e administradores.",
+  title: "Empática Pet | O Cuidado Perfeito para seu Pet",
+  description: "Ecossistema completo de saúde pet - conectando tutores, veterinários e tecnologia de IA com empatia.",
 };
 
 export default function RootLayout({
@@ -26,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${plusJakarta.variable} ${manrope.variable} h-full`}>
+    <html lang="pt-BR" className={`${plusJakarta.variable} ${manrope.variable} ${caveat.variable} h-full`}>
       <body className="min-h-full antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>

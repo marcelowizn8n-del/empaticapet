@@ -72,6 +72,13 @@
   --font-headline: "Plus Jakarta Sans", sans-serif;
   --font-body: "Manrope", sans-serif;
   --font-label: "Manrope", sans-serif;
+  --font-script: var(--font-script), "Caveat", cursive;
+
+  --color-warm-bg: #FAF3E0;
+  --color-warm-card: #FFFBF2;
+  --color-brown: #5C3D2E;
+  --color-brown-dark: #3E2723;
+  --color-brown-light: #8D6E63;
 
   --radius-sm: 0.5rem;
   --radius-DEFAULT: 0.75rem;
@@ -92,8 +99,18 @@
 }
 
 @layer utilities {
+  .font-script {
+    font-family: var(--font-script), cursive;
+  }
+
   .bg-primary-gradient {
     background: linear-gradient(135deg, #1d6457 0%, #3a7d6f 100%);
+  }
+
+  .bg-warm-hero {
+    background-color: #FAF3E0;
+    background-image: radial-gradient(#E8D5B7 0.75px, transparent 0.75px);
+    background-size: 24px 24px;
   }
 
   .glass {
@@ -107,3 +124,4 @@
     border-radius: 0.75rem;
   }
 }
+
