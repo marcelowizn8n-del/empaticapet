@@ -1,26 +1,109 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: #3A7D6F;
+  --color-primary-dark: #1d6457;
+  --color-primary-light: #90d3c3;
+  --color-primary-fixed: #acf0df;
+  --color-primary-container: #3a7d6f;
+
+  --color-secondary: #136299;
+  --color-secondary-container: #82c1fd;
+  --color-secondary-fixed: #cfe5ff;
+
+  --color-tertiary: #87490e;
+  --color-tertiary-container: #a56126;
+
+  --color-coral: #E8735A;
+  --color-coral-light: #FFF0ED;
+  --color-coral-dark: #C4523A;
+
+  --color-lavender: #7C6BC4;
+  --color-lavender-light: #F0EDFF;
+  --color-lavender-dark: #5B4FA0;
+
+  --color-sky: #3B8DD4;
+  --color-sky-light: #EBF4FF;
+  --color-sky-dark: #2A6BA3;
+
+  --color-amber: #E4943A;
+  --color-amber-light: #FFF5EB;
+  --color-amber-dark: #B8711E;
+
+  --color-rose: #D45B8C;
+  --color-rose-light: #FFF0F5;
+  --color-rose-dark: #A8406B;
+
+  --color-teal: #2BA8A0;
+  --color-teal-light: #ECFCFB;
+  --color-teal-dark: #1E7A74;
+
+  --color-background: #f8faf9;
+  --color-surface: #f8faf9;
+  --color-surface-dim: #d8dada;
+  --color-surface-bright: #f8faf9;
+  --color-surface-container: #eceeed;
+  --color-surface-container-low: #f2f4f3;
+  --color-surface-container-high: #e6e9e8;
+  --color-surface-container-highest: #e1e3e2;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-variant: #e1e3e2;
+
+  --color-on-surface: #191c1c;
+  --color-on-surface-variant: #3f4946;
+  --color-on-background: #191c1c;
+  --color-on-primary: #ffffff;
+  --color-on-secondary: #ffffff;
+
+  --color-outline: #6f7976;
+  --color-outline-variant: #bfc9c5;
+
+  --color-error: #E63946;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+
+  --color-success: #2D6A4F;
+  --color-warning: #FFB366;
+
+  --color-inverse-surface: #2e3131;
+  --color-inverse-on-surface: #eff1f0;
+  --color-inverse-primary: #90d3c3;
+
+  --font-headline: "Plus Jakarta Sans", sans-serif;
+  --font-body: "Manrope", sans-serif;
+  --font-label: "Manrope", sans-serif;
+
+  --radius-sm: 0.5rem;
+  --radius-DEFAULT: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-headline);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .bg-primary-gradient {
+    background: linear-gradient(135deg, #1d6457 0%, #3a7d6f 100%);
+  }
+
+  .glass {
+    background: rgba(248, 250, 249, 0.7);
+    backdrop-filter: blur(20px);
+  }
+
+  .sidebar-active {
+    background-color: var(--color-primary);
+    color: white;
+    border-radius: 0.75rem;
+  }
 }

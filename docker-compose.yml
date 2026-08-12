@@ -1,0 +1,15 @@
+services:
+  pawsandpulse:
+    build: .
+    container_name: pawsandpulse
+    restart: unless-stopped
+    ports:
+      - "3008:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN}
+      - MERCADOPAGO_PUBLIC_KEY=${MERCADOPAGO_PUBLIC_KEY}
+      - NEXT_PUBLIC_APP_URL=https://empaticapet.app
+    env_file:
+      - .env.production
