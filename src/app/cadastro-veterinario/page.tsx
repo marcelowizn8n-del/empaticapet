@@ -89,8 +89,8 @@ export default function CadastroVeterinarioPage() {
           {/* Left - Photo */}
           <section className="hidden lg:block relative min-h-[600px]">
             <Image
-              src="/hero-pets.png"
-              alt="Pets"
+              src="/about-vet-dog.png"
+              alt="Veterinária e cãozinho"
               fill
               className="object-cover"
               priority

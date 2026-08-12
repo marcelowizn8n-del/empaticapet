@@ -61,7 +61,7 @@ export default function LoginPage() {
         {/* Left - Photo */}
         <section className="hidden lg:block relative min-h-[600px]">
           <Image
-            src="/hero-pets.png"
+            src="/hero-dog-cat-human.png"
             alt="Pets"
             fill
             className="object-cover"
