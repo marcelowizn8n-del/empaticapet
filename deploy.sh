@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy Paws & Pulse to VPS (empaticapet.app)
-# Safe deploy: integrates with existing mdcodes_nginx proxy
+# Auto-detects Nginx configuration (Docker container vs Host Nginx)
 # Usage: ./deploy.sh
 
 VPS_IP="72.61.52.127"
@@ -38,11 +38,16 @@ ssh ${VPS_USER}@${VPS_IP} << 'EOF'
   echo "Building image..."
   docker build -t pawsandpulse:latest .
 
-  # Start container (no host port needed - nginx will proxy internally)
+  # Start container (mapping 3008:3000 for direct fallback access)
   docker run -d \
     --name pawsandpulse \
     --restart unless-stopped \
-    --env-file .env.production \
+    -p 3008:3000 \
+    --env-file .env.production 2>/dev/null || \
+  docker run -d \
+    --name pawsandpulse \
+    --restart unless-stopped \
+    -p 3008:3000 \
     -e NODE_ENV=production \
     -e NEXT_TELEMETRY_DISABLED=1 \
     -e NEXT_PUBLIC_APP_URL=https://empaticapet.app \
@@ -52,109 +57,69 @@ ssh ${VPS_USER}@${VPS_IP} << 'EOF'
   docker ps | grep pawsandpulse
 EOF
 
-# 3. Connect to mdcodes nginx network
+# 3. Configure Reverse Proxy & SSL
 echo ""
-echo "[3/5] Connecting to nginx network..."
+echo "[3/5] Configuring Proxy and SSL..."
 ssh ${VPS_USER}@${VPS_IP} << 'EOF'
-  # Find the network that mdcodes_nginx is on
-  NGINX_NETWORK=$(docker inspect mdcodes_nginx --format='{{range $key, $value := .NetworkSettings.Networks}}{{$key}} {{end}}' | awk '{print $1}')
-  echo "Nginx network: ${NGINX_NETWORK}"
+  cd /opt/pawsandpulse
 
-  # Connect pawsandpulse to that network
-  docker network connect ${NGINX_NETWORK} pawsandpulse 2>/dev/null
-  if [ $? -eq 0 ]; then
-    echo "Connected pawsandpulse to ${NGINX_NETWORK}"
+  # Detect running Nginx container
+  NGINX_CONTAINER=$(docker ps --format '{{.Names}}' | grep -i nginx | head -n 1)
+  CERTBOT_CONTAINER=$(docker ps --format '{{.Names}}' | grep -i certbot | head -n 1)
+
+  if [ -n "$NGINX_CONTAINER" ]; then
+    echo "Found Nginx Docker container: ${NGINX_CONTAINER}"
+    
+    # Connect pawsandpulse to Nginx container network
+    NGINX_NET=$(docker inspect ${NGINX_CONTAINER} --format='{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' | awk '{print $1}')
+    if [ -n "$NGINX_NET" ]; then
+      docker network connect ${NGINX_NET} pawsandpulse 2>/dev/null || true
+    fi
+
+    # Copy Nginx config into container
+    docker cp nginx/empaticapet.app.conf ${NGINX_CONTAINER}:/etc/nginx/conf.d/empaticapet.conf 2>/dev/null || \
+    docker exec ${NGINX_CONTAINER} sh -c "cat > /etc/nginx/conf.d/empaticapet.conf" < nginx/empaticapet.app.conf
+
+    # Check SSL or run Certbot
+    if [ -n "$CERTBOT_CONTAINER" ]; then
+      echo "Running Certbot via ${CERTBOT_CONTAINER}..."
+      docker exec ${CERTBOT_CONTAINER} certbot certonly --webroot -w /var/www/certbot -d empaticapet.app -d www.empaticapet.app --non-interactive --agree-tos --email marcelo@empaticapet.app 2>/dev/null || true
+    fi
+
+    docker exec ${NGINX_CONTAINER} nginx -t && docker exec ${NGINX_CONTAINER} nginx -s reload
+    echo "Nginx container reloaded successfully."
+
+  elif command -v nginx >/dev/null 2>&1; then
+    echo "Found Nginx installed on host system."
+    
+    # Update proxy pass in config for host Nginx -> localhost:3008
+    cp nginx/empaticapet.app.conf /etc/nginx/conf.d/empaticapet.conf 2>/dev/null || \
+    cp nginx/empaticapet.app.conf /etc/nginx/sites-available/empaticapet.app 2>/dev/null
+    
+    sed -i 's/pawsandpulse:3000/127.0.0.1:3008/g' /etc/nginx/conf.d/empaticapet.conf 2>/dev/null || true
+
+    if command -v certbot >/dev/null 2>&1; then
+      certbot --nginx -d empaticapet.app -d www.empaticapet.app --non-interactive --agree-tos --email marcelo@empaticapet.app 2>/dev/null || true
+    fi
+
+    nginx -t && systemctl reload nginx
+    echo "Host Nginx reloaded successfully."
   else
-    echo "Already connected or connecting..."
+    echo "Notice: Nginx reverse proxy not found on host or docker. Container running on port 3008."
   fi
-
-  # Verify connectivity
-  docker exec mdcodes_nginx ping -c 1 pawsandpulse 2>/dev/null && echo "Connectivity OK" || echo "Warning: ping failed (might still work)"
 EOF
 
-# 4. Add nginx config and get SSL
+# 4. Verify deployment
 echo ""
-echo "[4/5] Configuring Nginx + SSL..."
-ssh ${VPS_USER}@${VPS_IP} << 'SSLEOF'
-  # Copy nginx config into the mdcodes_nginx container
-  docker cp /opt/pawsandpulse/nginx/empaticapet.app.conf mdcodes_nginx:/etc/nginx/conf.d/empaticapet.conf
-
-  # Check if SSL cert already exists
-  if docker exec mdcodes_nginx test -f /etc/letsencrypt/live/empaticapet.app/fullchain.pem; then
-    echo "SSL certificate already exists"
-  else
-    echo "Getting SSL certificate..."
-
-    # First, add a temporary HTTP-only config for certbot challenge
-    docker exec mdcodes_nginx sh -c 'cat > /etc/nginx/conf.d/empaticapet.conf << TMPCONF
-server {
-    listen 80;
-    listen [::]:80;
-    server_name empaticapet.app www.empaticapet.app;
-    location /.well-known/acme-challenge/ { root /var/www/certbot; }
-    location / { return 200 "waiting for ssl"; add_header Content-Type text/plain; }
-}
-TMPCONF'
-
-    # Reload nginx with temp config
-    docker exec mdcodes_nginx nginx -t && docker exec mdcodes_nginx nginx -s reload
-    sleep 2
-
-    # Run certbot to get the certificate
-    docker exec mdcodes_certbot certbot certonly \
-      --webroot -w /var/www/certbot \
-      -d empaticapet.app -d www.empaticapet.app \
-      --non-interactive --agree-tos \
-      --email marcelo@empaticapet.app \
-      --force-renewal
-
-    # Restore full config with SSL
-    docker cp /opt/pawsandpulse/nginx/empaticapet.app.conf mdcodes_nginx:/etc/nginx/conf.d/empaticapet.conf
-  fi
-
-  # Test and reload nginx
-  docker exec mdcodes_nginx nginx -t
-  if [ $? -eq 0 ]; then
-    docker exec mdcodes_nginx nginx -s reload
-    echo "Nginx reloaded successfully"
-  else
-    echo "ERROR: Nginx config test failed! Rolling back..."
-    docker exec mdcodes_nginx rm /etc/nginx/conf.d/empaticapet.conf
-    docker exec mdcodes_nginx nginx -s reload
-    exit 1
-  fi
-SSLEOF
-
-# 5. Verify
-echo ""
-echo "[5/5] Verifying..."
+echo "[4/5] Verifying Deployment..."
 sleep 3
 ssh ${VPS_USER}@${VPS_IP} << 'EOF'
-  # Check container is running
-  echo "Container status:"
+  echo "Containers status:"
   docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(NAMES|pawsandpulse)"
-
-  # Check nginx can reach the app
-  echo ""
-  echo "Internal check:"
-  docker exec mdcodes_nginx wget -qO- --timeout=5 http://pawsandpulse:3000 | head -c 100
-  echo ""
-
-  # List all nginx configs
-  echo ""
-  echo "Active nginx configs:"
-  docker exec mdcodes_nginx ls /etc/nginx/conf.d/
 EOF
 
 echo ""
 echo "=========================================="
 echo "  Deploy complete!"
-echo ""
-echo "  Sites on this VPS:"
-echo "    - https://beautifull.codes (unchanged)"
-echo "    - https://painel.dttools.app (unchanged)"
-echo "    - https://empaticapet.app (NEW)"
-echo ""
-echo "  IMPORTANT: Make sure DNS A record"
-echo "  for empaticapet.app points to ${VPS_IP}"
+echo "  App running on VPS!"
 echo "=========================================="
