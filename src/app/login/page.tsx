@@ -27,10 +27,11 @@ export default function LoginPage() {
     });
 
     if (error) {
+      console.error("Erro no login Supabase:", error);
       setError(
         error.message === "Invalid login credentials"
           ? "E-mail ou senha incorretos."
-          : "Erro ao fazer login. Tente novamente."
+          : `Erro no login: ${error.message}`
       );
       setLoading(false);
       return;

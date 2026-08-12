@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { PawPrint, User, Mail, Phone, Lock, Eye, ArrowRight, Star, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -40,10 +41,11 @@ export default function CadastroPage() {
     });
 
     if (signUpError) {
+      console.error("Erro no cadastro Supabase:", signUpError);
       setError(
-        signUpError.message === "User already registered"
-          ? "Este e-mail já está cadastrado."
-          : "Erro ao criar conta. Tente novamente."
+        signUpError.message === "User already registered" || signUpError.message?.includes("already registered")
+          ? "Este e-mail já está cadastrado. Tente fazer o login."
+          : `Erro no cadastro: ${signUpError.message}`
       );
       setLoading(false);
       return;
@@ -87,8 +89,15 @@ export default function CadastroPage() {
             </div>
           </div>
 
-          <div className="relative z-10 mt-8 rounded-2xl overflow-hidden shadow-lg bg-inverse-surface aspect-video flex items-end p-6">
-            <div className="text-inverse-on-surface">
+          <div className="relative z-10 mt-8 rounded-2xl overflow-hidden shadow-lg aspect-video flex items-end p-6 border border-outline-variant/20">
+            <Image
+              src="/hero-dog-cat-human.png"
+              alt="Depoimento Empática Pet"
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+            <div className="relative z-10 text-white">
               <div className="flex gap-1 mb-2">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} size={14} className="fill-warning text-warning" />
