@@ -76,9 +76,13 @@ ssh ${VPS_USER}@${VPS_IP} << 'EOF'
       docker network connect ${NGINX_NET} pawsandpulse 2>/dev/null || true
     fi
 
+    # Adjust config for docker container internal proxying
+    cp nginx/empaticapet.app.conf /tmp/empaticapet.app.conf
+    sed -i 's/127.0.0.1:3008/pawsandpulse:3000/g' /tmp/empaticapet.app.conf
+
     # Copy Nginx config into container
-    docker cp nginx/empaticapet.app.conf ${NGINX_CONTAINER}:/etc/nginx/conf.d/empaticapet.conf 2>/dev/null || \
-    docker exec ${NGINX_CONTAINER} sh -c "cat > /etc/nginx/conf.d/empaticapet.conf" < nginx/empaticapet.app.conf
+    docker cp /tmp/empaticapet.app.conf ${NGINX_CONTAINER}:/etc/nginx/conf.d/empaticapet.conf 2>/dev/null || \
+    docker exec ${NGINX_CONTAINER} sh -c "cat > /etc/nginx/conf.d/empaticapet.conf" < /tmp/empaticapet.app.conf
 
     # Check SSL or run Certbot
     if [ -n "$CERTBOT_CONTAINER" ]; then
@@ -92,11 +96,9 @@ ssh ${VPS_USER}@${VPS_IP} << 'EOF'
   elif command -v nginx >/dev/null 2>&1; then
     echo "Found Nginx installed on host system."
     
-    # Update proxy pass in config for host Nginx -> localhost:3008
+    # Copy Nginx config to host Nginx
     cp nginx/empaticapet.app.conf /etc/nginx/conf.d/empaticapet.conf 2>/dev/null || \
     cp nginx/empaticapet.app.conf /etc/nginx/sites-available/empaticapet.app 2>/dev/null
-    
-    sed -i 's/pawsandpulse:3000/127.0.0.1:3008/g' /etc/nginx/conf.d/empaticapet.conf 2>/dev/null || true
 
     if command -v certbot >/dev/null 2>&1; then
       certbot --nginx -d empaticapet.app -d www.empaticapet.app --non-interactive --agree-tos --email marcelo@empaticapet.app 2>/dev/null || true
