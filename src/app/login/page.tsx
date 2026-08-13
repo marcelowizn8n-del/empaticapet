@@ -44,12 +44,14 @@ export default function LoginPage() {
         .from("profiles")
         .select("role")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (profile?.role === "vet") {
-        router.push("/painel");
-      } else if (profile?.role === "admin") {
+      const userRole = profile?.role || user.user_metadata?.role;
+
+      if (userRole === "admin") {
         router.push("/admin");
+      } else if (userRole === "vet") {
+        router.push("/painel");
       } else {
         router.push("/dashboard");
       }
